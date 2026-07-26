@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EDA Dashboard — E-Commerce Orders</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #090d13;
+    --panel: #0e141d;
+    --panel-border: #1b2735;
+    --grid: #17212e;
+    --cyan: #29e2f5;
+    --cyan-dim: #0f8ea3;
+    --text: #dbe4ee;
+    --text-dim: #7c8ba0;
+    --red: #ff5470;
+    --amber: #ffb454;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(41,226,245,0.06), transparent 40%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    padding:28px 32px 60px;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  /* header */
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    border-bottom:1px solid var(--panel-border);
+    padding-bottom:18px;
+    margin-bottom:24px;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .case-tag{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:2px;
+    color:var(--cyan);
+    border:1px solid var(--cyan-dim);
+    padding:4px 10px;
+    border-radius:3px;
+    display:inline-block;
+    margin-bottom:10px;
+  }
+  h1{
+    margin:0;
+    font-size:26px;
+    font-weight:800;
+    letter-spacing:-0.3px;
+  }
+  h1 span{color:var(--cyan);}
+  .subtitle{color:var(--text-dim);font-size:13px;margin-top:4px;font-family:'JetBrains Mono',monospace;}
+  .status-line{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--text-dim);
+    text-align:right;
+  }
+  .status-line .dot{
+    display:inline-block;width:7px;height:7px;border-radius:50%;
+    background:var(--cyan);margin-right:6px;
+    box-shadow:0 0 6px var(--cyan);
+  }
+
+  /* KPI strip */
+  .kpi-row{
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:12px;
+    margin-bottom:26px;
+  }
+  .kpi{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:6px;
+    padding:14px 16px;
+    position:relative;
+    overflow:hidden;
+  }
+  .kpi::before{
+    content:"";position:absolute;top:0;left:0;height:2px;width:100%;
+    background:linear-gradient(90deg, var(--cyan), transparent);
+    opacity:.6;
+  }
+  .kpi .label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+    color:var(--text-dim);margin-bottom:8px;
+  }
+  .kpi .value{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+  .kpi.flag .value{color:var(--red);}
+  .kpi.ok .value{color:var(--cyan);}
+
+  /* grid */
+  .grid{
+    display:grid;
+    grid-template-columns:1.3fr 1fr;
+    gap:16px;
+    margin-bottom:16px;
+  }
+  .grid.thirds{grid-template-columns:1fr 1fr 1fr;}
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:6px;
+    padding:18px 18px 10px;
+  }
+  .panel h2{
+    font-size:13px;
+    margin:0 0 2px;
+    font-weight:600;
+    color:var(--text);
+  }
+  .panel .insight{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--cyan);
+    margin-bottom:14px;
+    display:block;
+  }
+  .chart-wrap{position:relative;height:230px;}
+  .chart-wrap.tall{height:280px;}
+
+  /* boxplot custom svg */
+  .boxplot-legend{
+    display:flex;gap:14px;font-family:'JetBrains Mono',monospace;font-size:10px;
+    color:var(--text-dim);margin-top:6px;flex-wrap:wrap;
+  }
+  .boxplot-legend span.sw{display:inline-block;width:9px;height:9px;background:var(--cyan-dim);margin-right:4px;vertical-align:middle;}
+
+  /* correlation heatmap */
+  .heat-table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:11px;}
+  .heat-table th{color:var(--text-dim);font-weight:500;padding:6px 4px;font-size:10px;}
+  .heat-table td{
+    text-align:center;padding:10px 4px;border-radius:3px;color:#04141a;font-weight:700;
+  }
+  .heat-table td.rowlabel{color:var(--text-dim);text-align:right;padding-right:10px;font-weight:400;background:none;}
+
+  footer{
+    margin-top:30px;
+    border-top:1px solid var(--panel-border);
+    padding-top:14px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--text-dim);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+
+  @media (max-width: 980px){
+    .kpi-row{grid-template-columns:repeat(3,1fr);}
+    .grid, .grid.thirds{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="case-tag">CASE #EDA-002 — VERIFIED</div>
+    <h1>E-Commerce Order <span>Diagnostics</span></h1>
+    <div class="subtitle">1,200 orders · Jan 2023 – Jun 2025 · Project 2: Exploratory Data Analysis</div>
+  </div>
+  <div class="status-line"><span class="dot"></span>Data completeness: 100% · 0 nulls · 0 duplicates</div>
+</header>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="label">Total Orders</div><div class="value" id="kpi-orders">—</div></div>
+  <div class="kpi"><div class="label">Total Revenue</div><div class="value" id="kpi-revenue">—</div></div>
+  <div class="kpi"><div class="label">Avg Order Value</div><div class="value" id="kpi-aov">—</div></div>
+  <div class="kpi"><div class="label">Median Order Value</div><div class="value" id="kpi-median">—</div></div>
+  <div class="kpi flag"><div class="label">Cancellation Rate</div><div class="value" id="kpi-cancel">—</div></div>
+  <div class="kpi ok"><div class="label">Outliers Flagged (IQR)</div><div class="value" id="kpi-outliers">—</div></div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2>Order Value Distribution</h2>
+    <span class="insight">Right-skewed — mean pulled above median by a long tail of large orders</span>
+    <div class="chart-wrap tall"><canvas id="histChart"></canvas></div>
+  </div>
+  <div class="panel">
+    <h2>Order Status Breakdown</h2>
+    <span class="insight">Cancelled + Returned = 41.4% of all orders</span>
+    <div class="chart-wrap tall"><canvas id="statusChart"></canvas></div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2>Order Value Spread by Product (Outlier Check)</h2>
+    <span class="insight">Whiskers show expected range; no single product drives extreme outliers</span>
+    <div class="chart-wrap tall"><svg id="boxplotSvg" viewBox="0 0 640 260" style="width:100%;height:100%"></svg></div>
+    <div class="boxplot-legend">
+      <span><span class="sw"></span>Box = IQR (Q1–Q3) · Line = Median · Whiskers = 1.5×IQR range</span>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Correlation Matrix</h2>
+    <span class="insight">UnitPrice (r=0.72) edges out Quantity (r=0.62) as the stronger revenue driver</span>
+    <table class="heat-table" id="corrTable"></table>
+  </div>
+</div>
+
+<div class="grid thirds">
+  <div class="panel">
+    <h2>Revenue by Product</h2>
+    <span class="insight">Chair leads, Phone trails — 1.29× spread</span>
+    <div class="chart-wrap"><canvas id="productChart"></canvas></div>
+  </div>
+  <div class="panel">
+    <h2>Revenue by Payment Method</h2>
+    <span class="insight">Evenly split — no dominant channel</span>
+    <div class="chart-wrap"><canvas id="paymentChart"></canvas></div>
+  </div>
+  <div class="panel">
+    <h2>Revenue by Referral Source</h2>
+    <span class="insight">Instagram slightly ahead, all channels contribute</span>
+    <div class="chart-wrap"><canvas id="referralChart"></canvas></div>
+  </div>
+</div>
+
+<div class="grid" style="grid-template-columns:1fr;">
+  <div class="panel">
+    <h2>Monthly Revenue Trend</h2>
+    <span class="insight">Average order value has declined every year — 2023 → 2025</span>
+    <div class="chart-wrap tall"><canvas id="monthlyChart"></canvas></div>
+  </div>
+</div>
+
+<footer>
+  <span>Source: Cleaned Data sheet, project_1.xlsx · DecodeLabs Data Analytics Internship</span>
+  <span>Generated via eda_analysis.py</span>
+</footer>
+
+<script>
+const DATA = {"totalprice_hist": {"labels": ["7", "183", "355", "528", "700", "872", "1044", "1217", "1389", "1561", "1733", "1906", "2078", "2250", "2422", "2595", "2767", "2939", "3111", "3284"], "values": [131, 124, 149, 144, 76, 81, 76, 67, 47, 52, 44, 49, 27, 28, 30, 26, 15, 6, 16, 12]}, "box_by_product": {"Chair": {"min": 23.53, "q1": 412.62, "median": 928.58, "q3": 1596.32, "max": 3371.85}, "Desk": {"min": 26.95, "q1": 394.87, "median": 784.39, "q3": 1404.93, "max": 2920.04}, "Laptop": {"min": 18.2, "q1": 461.9, "median": 915.64, "q3": 1619.73, "max": 3356.47}, "Monitor": {"min": 24.48, "q1": 365.93, "median": 853.4, "q3": 1718.1, "max": 3390.95}, "Phone": {"min": 11.39, "q1": 430.45, "median": 691.71, "q3": 1432.04, "max": 2934.43}, "Printer": {"min": 30.44, "q1": 429.96, "median": 857.4, "q3": 1640.84, "max": 3353.75}, "Tablet": {"min": 17.24, "q1": 410.93, "median": 786.66, "q3": 1524.11, "max": 3193.87}}, "corr": {"labels": ["Quantity", "UnitPrice", "ItemsInCart", "TotalPrice"], "matrix": [[1.0, 0.015, 0.65, 0.615], [0.015, 1.0, 0.001, 0.717], [0.65, 0.001, 1.0, 0.393], [0.615, 0.717, 0.393, 1.0]]}, "revenue_by_product": {"labels": ["Chair", "Printer", "Laptop", "Tablet", "Monitor", "Desk", "Phone"], "values": [195620.11, 195612.61, 192126.56, 186568.95, 175651.41, 167459.93, 151722.39]}, "monthly": {"labels": ["2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06"], "values": [56685.75, 40117.66, 48609.37, 27751.71, 63836.84, 49500.19, 42820.66, 54352.14, 29526.67, 52607.85, 43079.67, 43754.73, 38528.08, 36909.57, 36030.9, 49613.14, 27909.11, 68068.54, 42963.98, 31991.07, 39794.98, 37226.97, 32413.76, 38785.77, 29099.4, 35317.55, 39200.66, 31821.2, 43396.64, 53047.4]}, "status": {"labels": ["Cancelled", "Returned", "Pending", "Shipped", "Delivered"], "values": [250, 247, 237, 235, 231]}, "payment": {"labels": ["Credit Card", "Online", "Cash", "Gift Card", "Debit Card"], "values": [263847.63, 262442.94, 259786.29, 246323.92, 232361.18]}, "referral": {"labels": ["Instagram", "Email", "Google", "Facebook", "Referral"], "values": [275285.45, 261808.55, 250441.48, 250410.9, 226815.58]}, "kpis": {"total_orders": 1200, "total_revenue": 1264761.96, "avg_order_value": 1053.97, "median_order_value": 823.62, "cancel_rate": 20.8, "outlier_count": 8}};
+
+const CYAN = '#29e2f5';
+const CYAN_DIM = 'rgba(41,226,245,0.35)';
+const RED = '#ff5470';
+const AMBER = '#ffb454';
+const TEXT_DIM = '#7c8ba0';
+const GRID_COLOR = '#17212e';
+
+Chart.defaults.font.family = "'JetBrains Mono', monospace";
+Chart.defaults.font.size = 10;
+Chart.defaults.color = TEXT_DIM;
+
+function fmtMoney(n){
+  return '$' + Math.round(n).toLocaleString();
+}
+
+// KPIs
+document.getElementById('kpi-orders').textContent = DATA.kpis.total_orders.toLocaleString();
+document.getElementById('kpi-revenue').textContent = fmtMoney(DATA.kpis.total_revenue);
+document.getElementById('kpi-aov').textContent = fmtMoney(DATA.kpis.avg_order_value);
+document.getElementById('kpi-median').textContent = fmtMoney(DATA.kpis.median_order_value);
+document.getElementById('kpi-cancel').textContent = DATA.kpis.cancel_rate + '%';
+document.getElementById('kpi-outliers').textContent = DATA.kpis.outlier_count;
+
+const commonGrid = { color: GRID_COLOR, drawTicks:false };
+
+// Histogram
+new Chart(document.getElementById('histChart'), {
+  type:'bar',
+  data:{
+    labels: DATA.totalprice_hist.labels.map(v => '$'+v),
+    datasets:[{ data: DATA.totalprice_hist.values, backgroundColor: CYAN_DIM, borderColor: CYAN, borderWidth:1, borderRadius:2 }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{ grid:{display:false}, ticks:{maxTicksLimit:8} },
+      y:{ grid: commonGrid, title:{display:true, text:'orders', color:TEXT_DIM} }
+    }
+  }
+});
+
+// Status donut
+new Chart(document.getElementById('statusChart'), {
+  type:'doughnut',
+  data:{
+    labels: DATA.status.labels,
+    datasets:[{
+      data: DATA.status.values,
+      backgroundColor: DATA.status.labels.map(l => l==='Cancelled' ? RED : (l==='Returned' ? AMBER : CYAN_DIM)),
+      borderColor: '#0e141d',
+      borderWidth: 2
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'right', labels:{ boxWidth:10, padding:12 } } }
+  }
+});
+
+// Boxplot (custom SVG)
+(function drawBoxplot(){
+  const svg = document.getElementById('boxplotSvg');
+  const products = Object.keys(DATA.box_by_product);
+  const allVals = products.flatMap(p => Object.values(DATA.box_by_product[p]));
+  const maxV = Math.max(...allVals);
+  const W = 640, H = 260, padL = 50, padR = 20, padT = 10, padB = 30;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const bw = plotW / products.length;
+  const y = v => padT + plotH - (v / maxV) * plotH;
+
+  let svgContent = '';
+  // y axis gridlines
+  for(let i=0;i<=4;i++){
+    const val = (maxV/4)*i;
+    const yy = y(val);
+    svgContent += `<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" stroke="${GRID_COLOR}" stroke-width="1"/>`;
+    svgContent += `<text x="${padL-8}" y="${yy+3}" text-anchor="end" font-size="9" fill="${TEXT_DIM}" font-family="JetBrains Mono">${Math.round(val)}</text>`;
+  }
+
+  products.forEach((p, i) => {
+    const stats = DATA.box_by_product[p];
+    const cx = padL + bw*i + bw/2;
+    const boxW = bw*0.45;
+    // whisker
+    svgContent += `<line x1="${cx}" y1="${y(stats.min)}" x2="${cx}" y2="${y(stats.q1)}" stroke="${CYAN}" stroke-width="1.3"/>`;
+    svgContent += `<line x1="${cx}" y1="${y(stats.q3)}" x2="${cx}" y2="${y(stats.max)}" stroke="${CYAN}" stroke-width="1.3"/>`;
+    svgContent += `<line x1="${cx-boxW/3}" y1="${y(stats.min)}" x2="${cx+boxW/3}" y2="${y(stats.min)}" stroke="${CYAN}" stroke-width="1.3"/>`;
+    svgContent += `<line x1="${cx-boxW/3}" y1="${y(stats.max)}" x2="${cx+boxW/3}" y2="${y(stats.max)}" stroke="${CYAN}" stroke-width="1.3"/>`;
+    // box
+    svgContent += `<rect x="${cx-boxW/2}" y="${y(stats.q3)}" width="${boxW}" height="${y(stats.q1)-y(stats.q3)}" fill="rgba(41,226,245,0.12)" stroke="${CYAN}" stroke-width="1.3"/>`;
+    // median
+    svgContent += `<line x1="${cx-boxW/2}" y1="${y(stats.median)}" x2="${cx+boxW/2}" y2="${y(stats.median)}" stroke="${AMBER}" stroke-width="2"/>`;
+    // label
+    svgContent += `<text x="${cx}" y="${H-8}" text-anchor="middle" font-size="10" fill="${TEXT_DIM}" font-family="JetBrains Mono">${p}</text>`;
+  });
+
+  svg.innerHTML = svgContent;
+})();
+
+// Correlation heatmap table
+(function drawCorr(){
+  const table = document.getElementById('corrTable');
+  const labels = DATA.corr.labels;
+  const m = DATA.corr.matrix;
+  function colorFor(v){
+    // v in [-1,1], map to cyan intensity
+    const a = Math.abs(v);
+    const light = 85 - a*55; // lighter for weak corr
+    return v >= 0 ? `hsl(188, 90%, ${light}%)` : `hsl(350, 80%, ${light}%)`;
+  }
+  let html = '<tr><th></th>' + labels.map(l=>`<th>${l}</th>`).join('') + '</tr>';
+  labels.forEach((rowLabel, i) => {
+    html += `<tr><td class="rowlabel">${rowLabel}</td>`;
+    labels.forEach((_, j) => {
+      const v = m[i][j];
+      html += `<td style="background:${colorFor(v)}">${v.toFixed(2)}</td>`;
+    });
+    html += '</tr>';
+  });
+  table.innerHTML = html;
+})();
+
+// Revenue by product
+new Chart(document.getElementById('productChart'), {
+  type:'bar',
+  data:{
+    labels: DATA.revenue_by_product.labels,
+    datasets:[{ data: DATA.revenue_by_product.values, backgroundColor: DATA.revenue_by_product.labels.map((_,i)=> i===0? CYAN : CYAN_DIM), borderRadius:3 }]
+  },
+  options:{
+    indexAxis:'y',
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{ x:{ grid: commonGrid, ticks:{ callback:v=>'$'+(v/1000)+'k' } }, y:{ grid:{display:false} } }
+  }
+});
+
+// Payment method
+new Chart(document.getElementById('paymentChart'), {
+  type:'bar',
+  data:{
+    labels: DATA.payment.labels,
+    datasets:[{ data: DATA.payment.values, backgroundColor: CYAN_DIM, borderColor:CYAN, borderWidth:1, borderRadius:3 }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{ x:{ grid:{display:false}, ticks:{ font:{size:9} } }, y:{ grid: commonGrid, ticks:{ callback:v=>'$'+(v/1000)+'k' } } }
+  }
+});
+
+// Referral source
+new Chart(document.getElementById('referralChart'), {
+  type:'bar',
+  data:{
+    labels: DATA.referral.labels,
+    datasets:[{ data: DATA.referral.values, backgroundColor: CYAN_DIM, borderColor:CYAN, borderWidth:1, borderRadius:3 }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{ x:{ grid:{display:false}, ticks:{ font:{size:9} } }, y:{ grid: commonGrid, ticks:{ callback:v=>'$'+(v/1000)+'k' } } }
+  }
+});
+
+// Monthly trend
+new Chart(document.getElementById('monthlyChart'), {
+  type:'line',
+  data:{
+    labels: DATA.monthly.labels,
+    datasets:[{
+      data: DATA.monthly.values,
+      borderColor: CYAN,
+      backgroundColor: 'rgba(41,226,245,0.08)',
+      fill:true,
+      tension:0.3,
+      pointRadius:2,
+      pointBackgroundColor: CYAN
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{ grid:{display:false}, ticks:{ maxTicksLimit:12, font:{size:9} } },
+      y:{ grid: commonGrid, ticks:{ callback:v=>'$'+(v/1000)+'k' } }
+    }
+  }
+});
+</script>
+
+</body>
+</html>

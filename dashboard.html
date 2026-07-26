@@ -1,0 +1,108 @@
+"""
+Project 2 — Exploratory Data Analysis (EDA)
+DecodeLabs Data Analytics Internship
+
+Dataset: Cleaned e-commerce order data (1,200 orders, Jan 2023 - Jun 2025)
+Source file: project_1.xlsx ("Cleaned Data" sheet) — output of Project 1's
+data-cleaning stage, used here as the input to the EDA stage.
+
+This script performs the four required EDA tasks:
+  1. Descriptive statistics (mean, median, count, five-number summary)
+  2. Trend and outlier detection (IQR method + Z-score method)
+  3. Relationship / correlation analysis
+  4. Summary of key observations (printed at the end)
+
+Run:
+    python eda_analysis.py
+"""
+
+import pandas as pd
+import numpy as np
+
+DATA_PATH = "1784734108259_project_1.xlsx"
+SHEET_NAME = "Cleaned Data"
+
+
+def load_data(path: str, sheet: str) -> pd.DataFrame:
+    """Load the cleaned order data and add a few derived time fields."""
+    df = pd.read_excel(path, sheet_name=sheet)
+    df["Month"] = df["Date"].dt.to_period("M")
+    df["Year"] = df["Date"].dt.year
+    return df
+
+
+def descriptive_stats(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """Return count / mean / median / five-number summary for numeric columns."""
+    return df[columns].describe().T[
+        ["count", "mean", "50%", "min", "25%", "75%", "max"]
+    ].rename(columns={"50%": "median", "25%": "Q1", "75%": "Q3"})
+
+
+def iqr_outliers(series: pd.Series) -> tuple[pd.Series, float, float]:
+    """Flag outliers using the 1.5*IQR rule. Returns (outlier rows, lower, upper)."""
+    q1, q3 = series.quantile(0.25), series.quantile(0.75)
+    iqr = q3 - q1
+    lower, upper = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+    return series[(series < lower) | (series > upper)], lower, upper
+
+
+def zscore_outliers(series: pd.Series, threshold: float = 3.0) -> pd.Series:
+    """Flag outliers where |Z| > threshold. Best suited to ~normal distributions."""
+    z = (series - series.mean()) / series.std()
+    return series[z.abs() > threshold]
+
+
+def correlation_matrix(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """Pearson correlation coefficients between numeric columns."""
+    return df[columns].corr()
+
+
+def segment_summary(df: pd.DataFrame, group_col: str, value_col: str = "TotalPrice") -> pd.DataFrame:
+    """Count, mean, and total revenue for a categorical segment."""
+    return (
+        df.groupby(group_col)[value_col]
+        .agg(order_count="count", avg_order_value="mean", total_revenue="sum")
+        .sort_values("total_revenue", ascending=False)
+    )
+
+
+def main():
+    df = load_data(DATA_PATH, SHEET_NAME)
+    numeric_cols = ["Quantity", "UnitPrice", "ItemsInCart", "TotalPrice"]
+
+    print("=" * 70)
+    print("1. DESCRIPTIVE STATISTICS")
+    print("=" * 70)
+    print(descriptive_stats(df, numeric_cols), "\n")
+
+    print("=" * 70)
+    print("2. OUTLIER DETECTION")
+    print("=" * 70)
+    for col in numeric_cols:
+        out, lo, hi = iqr_outliers(df[col])
+        z_out = zscore_outliers(df[col])
+        print(f"{col}: IQR bounds=({lo:.2f}, {hi:.2f}) -> {len(out)} flagged | "
+              f"Z-score(|z|>3) -> {len(z_out)} flagged")
+    print()
+
+    print("=" * 70)
+    print("3. CORRELATION ANALYSIS")
+    print("=" * 70)
+    print(correlation_matrix(df, numeric_cols), "\n")
+
+    print("=" * 70)
+    print("4. SEGMENT BREAKDOWNS")
+    print("=" * 70)
+    for col in ["Product", "OrderStatus", "PaymentMethod", "ReferralSource", "CouponCode"]:
+        print(f"\n--- By {col} ---")
+        print(segment_summary(df, col))
+
+    print("\n" + "=" * 70)
+    print("5. MONTHLY REVENUE TREND")
+    print("=" * 70)
+    monthly = df.groupby("Month")["TotalPrice"].agg(order_count="count", revenue="sum")
+    print(monthly)
+
+
+if __name__ == "__main__":
+    main()

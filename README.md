@@ -1,35 +1,39 @@
-# DecodeLabs Data Analytics Internship — Batch 2026
+# Project 4: Data Visualization (Optional)
 
-Portfolio of projects completed as part of the DecodeLabs Industrial Training Kit
-(Data Analytics track, Batch 2026). Each project builds on the last, using the same
-1,200-row e-commerce order dataset throughout — from raw cleaning, to exploratory analysis,
-to SQL-based querying.
+**Goal:** Turn the same order dataset used in Projects 1–3 into a boardroom-ready visual
+narrative — not just "making pretty charts," but data storytelling: choosing the right chart
+for each question, stripping out chartjunk, and driving toward a specific executive decision.
 
-## Projects
+## Deliverable
 
-| # | Project | Focus | Link |
-|---|---|---|---|
-| 1 | Data Cleaning | Producing an analysis-ready dataset from raw order data | [`project-1-data-cleaning/`](./project-1-data-cleaning) |
-| 2 | Exploratory Data Analysis (EDA) | Descriptive statistics, outlier detection, correlation analysis, trend identification | [`project-2-eda/`](./project-2-eda) |
-| 3 | SQL Data Analysis | Querying the same dataset in MySQL — filtering, grouping, aggregating, and answering business questions | [`project-3-sql-analysis/`](./project-3-sql-analysis) |
+- **`Project4_Order_Diagnostics.pptx`** — a 7-slide presentation deck built with native,
+  editable PowerPoint charts (not images).
 
-## Tech Stack
+## Structure (SCR framework: Situation → Complication → Resolution)
 
-- **Python** (pandas, matplotlib) — data cleaning and EDA
-- **MySQL 8.0** — structured querying and aggregation
-- **HTML/JS (Chart.js)** — interactive dashboard for EDA findings
+| Slide | Type | Insight |
+|---|---|---|
+| 1 | Title | Order Diagnostics — Turning a Silent Revenue Leak Into an Executive Action Plan |
+| 2 | Line chart (Situation) | Quarterly revenue has been sliding since early 2023, with no stable floor |
+| 3 | Bar chart (Complication) | Cancelled orders carry the highest average value of any status — $1,105.58 |
+| 4 | Stacked bar (Complication) | Cancellations dipped in 2024, then spiked to 26% of all orders in 2025 |
+| 5 | Scatter plot (Why it matters) | Unit price drives order value more than quantity does (r = 0.72 vs 0.62) |
+| 6 | Bar chart (Resolution) | Instagram and Facebook cancellations cost the most per order — target them first |
+| 7 | Closing / KPI summary | Recommended next steps, sized for the "5-second rule" |
 
-## Key Findings Across the Projects
+## Design principles applied
 
-- Order value is right-skewed — a handful of large, legitimate bulk orders (not data errors)
-  pull the average above the median.
-- **Cancelled orders are both the most frequent status (20.8%) and the highest-value on
-  average** ($1,105.58) — confirmed independently through both the EDA (Project 2) and SQL
-  queries (Project 3), making it the strongest, most actionable finding in this portfolio.
-- Revenue is evenly spread across the 7-product catalog (12–15.5% share each) — no single
-  product is propping up or dragging down the business.
-- Average order value has declined every year from 2023 to 2025, worth a follow-up
-  investigation into customer-level or channel-level causes.
+- **Chart Selection Matrix** — bar for category comparisons, line for trend over time, scatter
+  for relationships, stacked bar for composition. No pie charts.
+- **Color as a spotlight, not decoration** — muted grey for context, one bold accent color
+  reserved exclusively for the data point that matters (e.g. the Cancelled bar, the 2025 spike).
+- **Axis integrity** — every bar chart starts at zero; no 3D effects.
+- **Action titles** — each title states the conclusion, not just the topic.
+- **One slide, one message** — no crowded pages; each chart answers exactly one business
+  question.
+- **5-second rule** — the closing slide leads with KPIs top-left and ends on a concrete
+  "what should we do next."
 
-Each project folder has its own README with full methodology, queries/code, and detailed
-findings.
+This project ties directly back to the same cancellation finding surfaced independently in
+Project 2 (EDA) and Project 3 (SQL) — giving the whole portfolio one consistent, evidence-backed
+story across four different tools and techniques.
